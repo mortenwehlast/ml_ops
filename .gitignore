@@ -133,3 +133,6 @@ dmypy.json
 
 # Images
 *.png
+
+# Tensorboard test files
+*.local

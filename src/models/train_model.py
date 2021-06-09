@@ -6,131 +6,110 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import torch
-import torchvision
-from model import Classifier
 from torch import nn, optim
-from torch.utils.tensorboard import SummaryWriter
-
+from src.models.model import Classifier
 from src.data.make_dataset import load_mnist
 
-print("Training day and night")
-parser = argparse.ArgumentParser(description='Training arguments')
-parser.add_argument('--lr', default=0.1, type=float)
-parser.add_argument('--epochs', default=10, type=int)
-parser.add_argument('--batch_size', default=64, type=int)
-parser.add_argument('--dropout', default=0.2, type=float)
-parser.add_argument('--save_plots', default=True, type=bool)
 
-# add any additional argument that you want
-args = parser.parse_args(sys.argv[2:])
-print(args)
+class TrainWorker():
+    def __init__(self):
+        parser = argparse.ArgumentParser(description='Training arguments')
+        parser.add_argument('--lr', default=0.1, type=float)
+        parser.add_argument('--epochs', default=10, type=int)
+        parser.add_argument('--batch_size', default=64, type=int)
+        parser.add_argument('--dropout', default=0.2, type=float)
 
-# Define hyperparams
-epochs = args.epochs
-dropout = args.dropout
-lr = args.lr
-batch_size = args.batch_size
+        # add any additional argument that you want
+        args = parser.parse_args(sys.argv[2:])
+        print(args)
 
-# Set root path
-ROOT = str(Path(__file__).parent.parent.parent)
+        # Define hyperparams
+        self.epochs = args.epochs
+        self.dropout = args.dropout
+        self.lr = args.lr
+        self.batch_size = args.batch_size
 
-# Get training data
-train_set, _ = load_mnist()
-trainloader = torch.utils.data.DataLoader(
-    train_set,
-    batch_size=args.batch_size,
-    shuffle=True
-)
+        # Set root path
+        self.ROOT = str(Path(__file__).parent.parent.parent)
 
-# Get num inputs and classes and dropout
-temp_elem, _ = train_set[0]
-n_inputs = torch.numel(temp_elem)
-n_classes = len(train_set.classes)
-
-# Specify model
-model = Classifier(
-    n_inputs=n_inputs,
-    n_classes=n_classes,
-    dropout=dropout
-)
-
-# Tensorboard
-tb = SummaryWriter()
-hparam_dict = {
-    "lr": lr,
-    "batch_size": batch_size,
-    "dropout": dropout,
-    "epochs": epochs,
-}
-
-# Set optimizer, loss and learning rate
-optimizer = optim.SGD(model.parameters(), lr=lr)
-criterion = nn.NLLLoss()
-model.train()
-
-# Init for tracking of batch losses with histogram
-
-loss_history = []
-for e in range(epochs):
-    epoch_loss = 0
-    batch_losses = torch.zeros(len(trainloader))
-    for idx, (images, labels) in enumerate(trainloader):
-        optimizer.zero_grad()
-
-        # Compute scores and loss
-        scores = model(images)
-        loss = criterion(scores, labels)
-        epoch_loss += loss
-
-        # Backpropagate
-        loss.backward()
-
-        # Optimize
-        optimizer.step()
-
-        batch_losses[idx] = loss.item()
-
-    tb.add_scalar("Loss", epoch_loss.item(), e)
-    tb.add_histogram("Batch loss", batch_losses.detach().numpy())
-    loss_history.append(epoch_loss.item())
-    print(f"Training loss for epoch {e+1}: {epoch_loss}")
-
-tb.add_hparams(
-    hparam_dict,
-    {
-        "loss": epoch_loss.item(),
-    },
-)
-grid = torchvision.utils.make_grid(images)
-tb.add_images("images", grid)
-tb.add_graph(model, images)
-tb.close()
-
-print("Training complete.")
-
-# Save model
-today = datetime.now().strftime("%Y%m%d")
-params = [str(param) for param in [n_inputs, n_classes, epochs, dropout]]
-filename = today + "_" + ("_").join(params) + ".pth"
-path = os.path.join(ROOT, "models", filename)
-print("Saving model to: ", path)
-torch.save(model.state_dict(), path)
-
-# Save training plot
-if args.save_plots:
-    plt.figure(figsize=(12, 8))
-    plt.plot(list(range(epochs)), loss_history)
-    plt.title(
-        "Loss for FMNIST classifier with dropout "
-        + f"={dropout} and {epochs} epochs."
-    )
-    plt.xlabel("Epoch")
-    plt.ylabel("Negative Log-Likelihood")
-    plt.savefig(
-        os.path.join(
-            ROOT,
-            "reports",
-            "figures",
-            ("_").join(params) + ".png"
+    def train(self):
+        # Get training data
+        train_set, _ = load_mnist()
+        trainloader = torch.utils.data.DataLoader(
+            train_set,
+            batch_size=self.batch_size,
+            shuffle=True
         )
-    )
+
+        # Get num inputs and classes and dropout
+        temp_elem, _ = train_set[0]
+        n_inputs = torch.numel(temp_elem)
+        n_classes = len(train_set.classes)
+
+        # Specify model
+        self.model = Classifier(
+            n_inputs=n_inputs,
+            n_classes=n_classes,
+            dropout=self.dropout
+        )
+
+        # Set optimizer, loss and learning rate
+        optimizer = optim.SGD(self.model.parameters(), lr=self.lr)
+        criterion = nn.NLLLoss()
+        self.model.train()
+
+        # Init for tracking of batch losses with histogram
+        self.loss_history = []
+        for e in range(self.epochs):
+            epoch_loss = 0
+            batch_losses = torch.zeros(len(trainloader))
+            for idx, (images, labels) in enumerate(trainloader):
+                optimizer.zero_grad()
+
+                # Compute scores and loss
+                scores = self.model(images)
+                loss = criterion(scores, labels)
+                epoch_loss += loss
+
+                # Backpropagate
+                loss.backward()
+
+                # Optimize
+                optimizer.step()
+
+                batch_losses[idx] = loss.item()
+
+            self.loss_history.append(epoch_loss.item())
+            print(f"Training loss for epoch {e+1}: {epoch_loss}")
+
+        print("Training complete.")
+
+        return batch_losses
+
+        def save_model(self):
+            # Save model
+            today = datetime.now().strftime("%Y%m%d")
+            filename = today + ".pth"
+            path = os.path.join(self.ROOT, "models", filename)
+            print("Saving model to: ", path)
+            torch.save(self.model.state_dict(), path)
+
+        def make_plots(self):
+            today = datetime.now().strftime("%Y%m%d")
+            filename = today + ".png"
+            path = os.path.join(
+                    self.ROOT,
+                    "reports",
+                    "figures",
+                    filename
+                )
+
+            plt.figure(figsize=(12, 8))
+            plt.plot(list(range(self.epochs)), self.loss_history)
+            plt.title(
+                "Loss for FMNIST classifier with dropout "
+                + f"={self.dropout} and {self.epochs} epochs."
+            )
+            plt.xlabel("Epoch")
+            plt.ylabel("Negative Log-Likelihood")
+            plt.savefig(path)
