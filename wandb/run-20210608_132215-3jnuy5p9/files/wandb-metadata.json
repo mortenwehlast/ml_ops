@@ -1,0 +1,26 @@
+{
+    "os": "macOS-10.15.7-x86_64-i386-64bit",
+    "python": "3.9.5",
+    "heartbeatAt": "2021-06-08T11:22:17.357929",
+    "startedAt": "2021-06-08T11:22:15.913988",
+    "docker": null,
+    "cpu_count": 8,
+    "cuda": null,
+    "args": [
+        "-h",
+        "--dropout",
+        "0.2"
+    ],
+    "state": "running",
+    "program": "/Users/Morten/Library/Mobile Documents/com~apple~CloudDocs/Studie/Kandidat/3. semester/MLOps/ml_ops/src/models/train_model_wandb.py",
+    "codePath": "src/models/train_model_wandb.py",
+    "git": {
+        "remote": "git@github.com:mortenwehlast/ml_ops.git",
+        "commit": "69bfb9d3d123e5a75f7832c7efcf09f878f32c0b"
+    },
+    "email": "mortenwehlast@berkeley.edu",
+    "root": "/Users/Morten/Library/Mobile Documents/com~apple~CloudDocs/Studie/Kandidat/3. semester/MLOps/ml_ops",
+    "host": "mortens-mbp-7.clients.wireless.dtu.dk",
+    "username": "Morten",
+    "executable": "/opt/anaconda3/envs/mlops/bin/python"
+}

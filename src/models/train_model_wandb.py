@@ -9,7 +9,6 @@ import torch
 import torchvision
 from model import Classifier
 from torch import nn, optim
-from torch.utils.tensorboard import SummaryWriter
 
 from src.data.make_dataset import load_mnist
 
@@ -54,14 +53,13 @@ model = Classifier(
     dropout=dropout
 )
 
-# Tensorboard
-tb = SummaryWriter()
-hparam_dict = {
-    "lr": lr,
-    "batch_size": batch_size,
-    "dropout": dropout,
-    "epochs": epochs,
-}
+
+# wandb
+import wandb
+wandb.init(config=args)
+
+# Magic
+wandb.watch(model, log_freq=100)
 
 # Set optimizer, loss and learning rate
 optimizer = optim.SGD(model.parameters(), lr=lr)
@@ -70,7 +68,6 @@ model.train()
 
 # Init for tracking of batch losses with histogram
 
-loss_history = []
 for e in range(epochs):
     epoch_loss = 0
     batch_losses = torch.zeros(len(trainloader))
@@ -90,47 +87,10 @@ for e in range(epochs):
 
         batch_losses[idx] = loss.item()
 
-    tb.add_scalar("Loss", epoch_loss.item(), e)
-    tb.add_histogram("Batch loss", batch_losses.detach().numpy())
-    loss_history.append(epoch_loss.item())
+    wandb.log({"loss": epoch_loss.item()})
     print(f"Training loss for epoch {e+1}: {epoch_loss}")
 
-tb.add_hparams(
-    hparam_dict,
-    {
-        "loss": epoch_loss.item(),
-    },
-)
-grid = torchvision.utils.make_grid(images)
-tb.add_images("images", grid)
-tb.add_graph(model, images)
-tb.close()
+wandb.log({"examples" : [wandb.Image(i) for i in images]})
+wandb.finish()
 
 print("Training complete.")
-
-# Save model
-today = datetime.now().strftime("%Y%m%d")
-params = [str(param) for param in [n_inputs, n_classes, epochs, dropout]]
-filename = today + "_" + ("_").join(params) + ".pth"
-path = os.path.join(ROOT, "models", filename)
-print("Saving model to: ", path)
-torch.save(model.state_dict(), path)
-
-# Save training plot
-if args.save_plots:
-    plt.figure(figsize=(12, 8))
-    plt.plot(list(range(epochs)), loss_history)
-    plt.title(
-        "Loss for FMNIST classifier with dropout "
-        + f"={dropout} and {epochs} epochs."
-    )
-    plt.xlabel("Epoch")
-    plt.ylabel("Negative Log-Likelihood")
-    plt.savefig(
-        os.path.join(
-            ROOT,
-            "reports",
-            "figures",
-            ("_").join(params) + ".png"
-        )
-    )
