@@ -29,6 +29,9 @@ class TrainWorker():
         self.lr = args.lr
         self.batch_size = args.batch_size
 
+        # Init for tracking of batch losses with histogram
+        self.loss_history = []
+
         # Set root path
         self.ROOT = str(Path(__file__).parent.parent.parent)
 
@@ -58,8 +61,6 @@ class TrainWorker():
         criterion = nn.NLLLoss()
         self.model.train()
 
-        # Init for tracking of batch losses with histogram
-        self.loss_history = []
         for e in range(self.epochs):
             epoch_loss = 0
             batch_losses = torch.zeros(len(trainloader))
@@ -86,30 +87,35 @@ class TrainWorker():
 
         return batch_losses
 
-        def save_model(self):
-            # Save model
-            today = datetime.now().strftime("%Y%m%d")
-            filename = today + ".pth"
-            path = os.path.join(self.ROOT, "models", filename)
-            print("Saving model to: ", path)
-            torch.save(self.model.state_dict(), path)
+    def save_model(self):
+        # Save model
+        today = datetime.now().strftime("%Y%m%d")
+        filename = today + ".pth"
+        path = os.path.join(self.ROOT, "models", filename)
+        print("Saving model to: ", path)
+        torch.save(self.model.state_dict(), path)
 
-        def make_plots(self):
-            today = datetime.now().strftime("%Y%m%d")
-            filename = today + ".png"
-            path = os.path.join(
-                    self.ROOT,
-                    "reports",
-                    "figures",
-                    filename
-                )
-
-            plt.figure(figsize=(12, 8))
-            plt.plot(list(range(self.epochs)), self.loss_history)
-            plt.title(
-                "Loss for FMNIST classifier with dropout "
-                + f"={self.dropout} and {self.epochs} epochs."
+    def make_plots(self):
+        if not self.loss_history:
+            raise ValueError(
+                "No loss history to be plotted. Run .train() first."
             )
-            plt.xlabel("Epoch")
-            plt.ylabel("Negative Log-Likelihood")
-            plt.savefig(path)
+
+        today = datetime.now().strftime("%Y%m%d")
+        filename = today + ".png"
+        path = os.path.join(
+                self.ROOT,
+                "reports",
+                "figures",
+                filename
+            )
+
+        plt.figure(figsize=(12, 8))
+        plt.plot(list(range(self.epochs)), self.loss_history)
+        plt.title(
+            "Loss for FMNIST classifier with dropout "
+            + f"={self.dropout} and {self.epochs} epochs."
+        )
+        plt.xlabel("Epoch")
+        plt.ylabel("Negative Log-Likelihood")
+        plt.savefig(path)
