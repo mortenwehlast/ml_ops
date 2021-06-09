@@ -9,6 +9,7 @@ from src.models.model import Classifier
         ("torch.randn((10, 1, 28, 28))", torch.Size([10, 10])),
         ("torch.randn((1, 1, 28, 28))", torch.Size([1, 10])),
         ("torch.randn((100, 1, 28, 28))", torch.Size([100, 10])),
+        ("torch.randn((50, 1, 28, 28))", torch.Size([50, 10])),
     ]
 )
 def test_model_output_shape(test_input, expected):
